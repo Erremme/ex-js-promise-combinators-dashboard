@@ -26,6 +26,7 @@ async function fetchJson(url) {
 }
 
 async function getDashboardData(query) {
+    try{
     const destinationPromise = fetchJson(`http://localhost:5000/destinations?search=${query}`)
     const weatherPromise = fetchJson(`http://localhost:5000/weathers?search=${query}`)
     const airportPromise = fetchJson(`http://localhost:5000/airports?search=${query}`)
@@ -40,6 +41,13 @@ async function getDashboardData(query) {
         weather: weather[0].weather_description,
         airport: airport[0].name
     }
+
+    }catch (error) {
+        throw new Error(`Errore nel recupero dei dati: ${error.message}` );
+        
+       
+    }
+   
 
   
 }
