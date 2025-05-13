@@ -23,6 +23,15 @@ Testa la funzione con la query "london"
 Se l’array di ricerca è vuoto, invece di far fallire l'intera funzione, semplicemente i dati relativi a quella chiamata verranno settati a null e  la frase relativa non viene stampata. Testa la funzione con la query “vienna” (non trova il meteo).
 */
 
+/*
+Attualmente, se una delle chiamate fallisce, **Promise.all()** rigetta l'intera operazione.
+
+Modifica `getDashboardData()` per usare **Promise.allSettled()**, in modo che:
+Se una chiamata fallisce, i dati relativi a quella chiamata verranno settati a null.
+Stampa in console un messaggio di errore per ogni richiesta fallita.
+Testa la funzione con un link fittizio per il meteo (es. https://www.meteofittizio.it).
+*/
+
 async function fetchJson(url) {
     const response = await fetch(url);
     const obj = await response.json();
@@ -33,22 +42,40 @@ async function getDashboardData(query) {
     try{
     const destinationPromise = fetchJson(`http://localhost:5000/destinations?search=${query}`)
     const weatherPromise = fetchJson(`http://localhost:5000/weathers?search=${query}`)
-    const airportPromise = fetchJson(`http://localhost:5000/airports?search=${query}`)
+    const airportPromise = fetchJson(` http://localhost:5000/airports?search=${query}`)
 
     const promises = [destinationPromise, weatherPromise, airportPromise];
-    const [destinations ,weathers, airports  ] = await Promise.all(promises)
+    const [destinationsResult ,weathersResult, airportsResult  ] = await Promise.allSettled(promises)
+     const data = {};
+     if(destinationsResult.status === 'rejected'){
+        console.error(`Errore nel recupero delle destinazioni: ${destinationsResult.reason}`);
+        data.city = null;
+        data.country = null;
+     }else{
+        const destination = destinationsResult.value[0];
+        data.city = destination?.name ?? null,
+        data.country = destination?.country ?? null
+     }
+        if(weathersResult.status === 'rejected'){
+            console.error(`Errore nel recupero del meteo: ${weathersResult.reason}`);
+            data.temperature = null;
+            data.weather = null;
+        }
+        else{
+            const weather = weathersResult.value[0];
+            data.temperature = weather?.temperature ?? null,
+            data.weather = weather?.weather_description ?? null
+        }
 
-    const destination = destinations[0]
-    const weather = weathers[0]
-    const airport = airports[0]
-
-    return {
-        city: destinations?.name ?? null,
-        country: destinations?.country ?? null,
-        temperature: weather?.temperature ?? null,
-        weather: weather?.weather_description ?? null,
-        airport: airport?.name ?? null
-    }
+        if(airportsResult.status === 'rejected'){
+            console.error(`Errore nel recupero degli aeroporti: ${airportsResult.reason}`);
+            data.airport = null;
+        }else{
+            const airport = airportsResult.value[0];
+            data.airport = airport?.name ?? null
+        }
+    
+        return data;
 
     }catch (error) {
         throw new Error(`Errore nel recupero dei dati: ${error.message}` );
